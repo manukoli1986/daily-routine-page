@@ -1,10 +1,18 @@
 const Koa = require('koa');
+const serve = require('koa-static');
+const path = require('path');
+
 const app = new Koa();
 
+// Serve static files from the public directory
+app.use(serve(path.join(__dirname, 'public')));
+
+// Fallback: serve index.html for the root route
 app.use(async ctx => {
   if (ctx.path === '/') {
     ctx.type = 'html';
-    ctx.body = '<!doctype html><html><head><meta charset="utf-8"><title>Hello</title></head><body><h1>Hello, World — Koa.js</h1></body></html>';
+    const fs = require('fs');
+    ctx.body = fs.createReadStream(path.join(__dirname, 'public', 'index.html'));
   } else {
     ctx.status = 404;
     ctx.body = 'Not Found';
@@ -12,6 +20,7 @@ app.use(async ctx => {
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Koa server listening on http://localhost:${PORT}/`);
+const HOST = process.env.HOST || '0.0.0.0';
+app.listen(PORT, HOST, () => {
+  console.log(`🗓️  Daily Routine Planner running at http://${HOST}:${PORT}/`);
 });
