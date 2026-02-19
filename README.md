@@ -23,18 +23,47 @@ npm start
 
 ## Docker
 
-### Build & Run
+### Build & Run (Single Architecture)
 
 ```bash
 docker build -t manukoli1986/daily-routine-page:latest .
 docker run -p 3000:3000 manukoli1986/daily-routine-page:latest
 ```
 
-### Push to Docker Hub
+### Multi-Architecture Build
+
+The Dockerfile supports building images for multiple CPU architectures using [Docker Buildx](https://docs.docker.com/build/buildx/).
+
+| Platform | Description |
+|---|---|
+| `linux/amd64` | Standard x86_64 servers, Intel/AMD Macs |
+| `linux/arm64` | Apple Silicon Macs, AWS Graviton, ARM servers |
+| `linux/arm/v7` | Raspberry Pi, IoT devices |
+
+**Using the convenience script:**
 
 ```bash
-docker login
-docker push manukoli1986/daily-routine-page:latest
+# Build for your current platform only
+./docker-build.sh local
+
+# Build multi-arch and push to a registry
+./docker-build.sh push docker.io/manukoli1986/daily-routine-page:latest
+
+# Inspect a pushed multi-arch manifest
+./docker-build.sh inspect manukoli1986/daily-routine-page:latest
+```
+
+**Using Docker Buildx directly:**
+
+```bash
+# Create a multi-arch builder (one-time setup)
+docker buildx create --name mybuilder --use --bootstrap
+
+# Build & push for multiple platforms
+docker buildx build \
+  --platform linux/amd64,linux/arm64,linux/arm/v7 \
+  --push \
+  -t manukoli1986/daily-routine-page:latest .
 ```
 
 ### Pull & Run
@@ -43,6 +72,8 @@ docker push manukoli1986/daily-routine-page:latest
 docker pull manukoli1986/daily-routine-page:latest
 docker run -p 3000:3000 manukoli1986/daily-routine-page:latest
 ```
+
+> Docker automatically pulls the correct architecture for your machine.
 
 ## Deploy on Azure App Service
 
