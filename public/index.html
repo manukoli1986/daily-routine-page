@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description"
+    content="A beautiful daily routine planner to organize your day with categories, time blocks, and progress tracking.">
+  <title>Daily Routine Planner</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+  <!-- Animated background orbs -->
+  <div class="bg-orb bg-orb-1"></div>
+  <div class="bg-orb bg-orb-2"></div>
+  <div class="bg-orb bg-orb-3"></div>
+
+  <div class="app-container">
+    <!-- Header -->
+    <header class="header">
+      <div class="header-left">
+        <div class="header-icon">🗓️</div>
+        <div>
+          <h1>Daily Routine</h1>
+          <p class="header-date" id="currentDate"></p>
+        </div>
+      </div>
+      <div class="header-right">
+        <div class="greeting" id="greeting"></div>
+        <div class="current-time" id="currentTime"></div>
+        <a href="dashboard.html" class="dashboard-link" id="dashboardLink">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="7" height="7" />
+            <rect x="14" y="3" width="7" height="7" />
+            <rect x="14" y="14" width="7" height="7" />
+            <rect x="3" y="14" width="7" height="7" />
+          </svg>
+          Dashboard
+        </a>
+      </div>
+    </header>
+
+    <!-- Date Navigator -->
+    <section class="date-nav">
+      <button class="date-nav-btn" id="prevDayBtn" aria-label="Previous day">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+          stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="15 18 9 12 15 6" />
+        </svg>
+      </button>
+      <div class="date-nav-center">
+        <span class="date-nav-label" id="dateLabel">Today</span>
+      </div>
+      <button class="date-nav-btn" id="nextDayBtn" aria-label="Next day">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+          stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="9 18 15 12 9 6" />
+        </svg>
+      </button>
+      <button class="date-nav-today" id="todayBtn" style="display:none;">Today</button>
+    </section>
+
+    <!-- Progress Section -->
+    <section class="progress-section">
+      <div class="progress-card">
+        <div class="progress-info">
+          <span class="progress-label">Today's Progress</span>
+          <span class="progress-value" id="progressValue">0%</span>
+        </div>
+        <div class="progress-bar-track">
+          <div class="progress-bar-fill" id="progressBar"></div>
+        </div>
+        <div class="progress-stats">
+          <div class="stat">
+            <span class="stat-number" id="completedCount">0</span>
+            <span class="stat-label">Done</span>
+          </div>
+          <div class="stat">
+            <span class="stat-number" id="pendingCount">0</span>
+            <span class="stat-label">Remaining</span>
+          </div>
+          <div class="stat">
+            <span class="stat-number" id="totalCount">0</span>
+            <span class="stat-label">Total</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Category Filters -->
+    <section class="filter-section">
+      <button class="filter-btn active" data-filter="all" id="filterAll">
+        <span class="filter-dot filter-dot-all"></span> All
+      </button>
+      <button class="filter-btn" data-filter="work" id="filterWork">
+        <span class="filter-dot filter-dot-work"></span> Work
+      </button>
+      <button class="filter-btn" data-filter="health" id="filterHealth">
+        <span class="filter-dot filter-dot-health"></span> Health
+      </button>
+      <button class="filter-btn" data-filter="personal" id="filterPersonal">
+        <span class="filter-dot filter-dot-personal"></span> Personal
+      </button>
+      <button class="filter-btn" data-filter="meals" id="filterMeals">
+        <span class="filter-dot filter-dot-meals"></span> Meals
+      </button>
+      <button class="filter-btn" data-filter="leisure" id="filterLeisure">
+        <span class="filter-dot filter-dot-leisure"></span> Leisure
+      </button>
+    </section>
+
+    <!-- Timeline / Routine List -->
+    <section class="timeline-section">
+      <div class="timeline" id="routineList">
+        <!-- Routine items rendered by JS -->
+      </div>
+    </section>
+
+    <!-- Add Button (FAB) -->
+    <button class="fab" id="addBtn" aria-label="Add routine">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+        stroke-linecap="round" stroke-linejoin="round">
+        <line x1="12" y1="5" x2="12" y2="19"></line>
+        <line x1="5" y1="12" x2="19" y2="12"></line>
+      </svg>
+    </button>
+  </div>
+
+  <!-- Modal Overlay -->
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal" id="routineModal">
+      <div class="modal-header">
+        <h2 id="modalTitle">Add Routine</h2>
+        <button class="modal-close" id="modalClose" aria-label="Close">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <form id="routineForm">
+        <div class="form-group">
+          <label for="routineTitle">Title</label>
+          <input type="text" id="routineTitle" placeholder="e.g. Morning Workout" required autocomplete="off">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="routineTime">Time</label>
+            <input type="time" id="routineTime" required>
+          </div>
+          <div class="form-group">
+            <label for="routineDuration">Duration (min)</label>
+            <input type="number" id="routineDuration" placeholder="30" min="5" max="480" required>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="routineCategory">Category</label>
+          <div class="category-picker" id="categoryPicker">
+            <button type="button" class="cat-btn cat-work active" data-category="work">💼 Work</button>
+            <button type="button" class="cat-btn cat-health" data-category="health">🏃 Health</button>
+            <button type="button" class="cat-btn cat-personal" data-category="personal">🧘 Personal</button>
+            <button type="button" class="cat-btn cat-meals" data-category="meals">🍽️ Meals</button>
+            <button type="button" class="cat-btn cat-leisure" data-category="leisure">🎮 Leisure</button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="routineNotes">Notes <span class="optional">(optional)</span></label>
+          <textarea id="routineNotes" placeholder="Any additional details..." rows="2"></textarea>
+        </div>
+        <input type="hidden" id="routineId" value="">
+        <div class="form-actions">
+          <button type="button" class="btn btn-secondary" id="cancelBtn">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="saveBtn">Add Routine</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Delete Confirmation -->
+  <div class="modal-overlay" id="deleteOverlay">
+    <div class="modal modal-sm">
+      <div class="modal-header">
+        <h2>Delete Routine?</h2>
+      </div>
+      <p class="delete-msg">This action cannot be undone.</p>
+      <div class="form-actions">
+        <button type="button" class="btn btn-secondary" id="cancelDeleteBtn">Cancel</button>
+        <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+
+</html>
