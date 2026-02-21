@@ -1,12 +1,21 @@
 // ===== Daily Routine Planner - Client-Side Logic =====
-// Multi-day storage with date navigation
+// Multi-user, multi-day storage with date navigation
 
 (() => {
   'use strict';
 
-  // ===== Storage Keys =====
-  const STORAGE_KEY = 'dailyRoutineData';    // per-date routine data
-  const TEMPLATE_KEY = 'dailyRoutineTemplate'; // routine template
+  // ===== Authentication Check =====
+  const currentUser = window.AuthAPI?.getCurrentUser();
+  if (!currentUser) {
+    window.location.href = 'login.html';
+    return;
+  }
+
+  // ===== Storage Keys (User-Specific) =====
+  const STORAGE_KEY = window.AuthAPI.getUserRoutinesKey(currentUser.username);
+  const SAVED_TEMPLATES_KEY = window.AuthAPI.getUserTemplatesKey(currentUser.username);
+  const TEMPLATE_KEY = 'dailyRoutineTemplate';  // default routine template (shared)
+  const NOTIFICATIONS_KEY_USER = 'notificationsEnabled_' + currentUser.username;
 
   // ===== Default Routines Template =====
   const DEFAULT_TEMPLATE = [
@@ -38,6 +47,8 @@
   let activeFilter = 'all';
   let editingId = null;
   let deletingId = null;
+  let notificationsEnabled = false;
+  let notificationCheckInterval = null;
 
   // ===== DOM Elements =====
   const $ = (sel) => document.querySelector(sel);
@@ -77,6 +88,18 @@
     deleteOverlay: $('#deleteOverlay'),
     cancelDeleteBtn: $('#cancelDeleteBtn'),
     confirmDeleteBtn: $('#confirmDeleteBtn'),
+    // Recurrence & Notifications
+    recurrencePicker: $('#recurrencePicker'),
+    // Notifications
+    notificationBtn: $('#notificationBtn'),
+    // Templates
+    templateBtn: $('#templateBtn'),
+    templatesOverlay: $('#templatesOverlay'),
+    templatesClose: $('#templatesClose'),
+    templatesModal: $('#templatesModal'),
+    templatesContainer: $('#templatesContainer'),
+    saveAsTemplateBtn: $('#saveAsTemplateBtn'),
+    templateNameInput: $('#templateNameInput'),
   };
 
   // ===== Date Helpers =====
@@ -152,11 +175,22 @@
         ...r,
         id: r.id + '_' + key,
         completed: false,
+        recurrence: r.recurrence || 'none',
+        recurringDays: r.recurringDays,
+        monthlyDay: r.monthlyDay,
       }));
       // Auto-save so it persists
       data[key] = routines;
       saveAllData(data);
     }
+
+    // Add recurring routines from saved templates
+    const recurringRoutines = getRecurringRoutinesForDate(d);
+    recurringRoutines.forEach(rr => {
+      if (!routines.find(r => r.id === rr.id)) {
+        routines.push(rr);
+      }
+    });
   }
 
   function saveRoutines() {
@@ -232,6 +266,249 @@
     return Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
   }
 
+  // ===== Notifications =====
+  function initNotifications() {
+    notificationsEnabled = localStorage.getItem(NOTIFICATIONS_KEY_USER) === 'true';
+    updateNotificationButton();
+    if (notificationsEnabled && Notification.permission === 'granted') {
+      startNotificationCheck();
+    }
+  }
+
+  function updateNotificationButton() {
+    if (!els.notificationBtn) return;
+    if (notificationsEnabled) {
+      els.notificationBtn.textContent = '🔔 Notifications On';
+      els.notificationBtn.classList.add('active');
+    } else {
+      els.notificationBtn.textContent = '🔕 Notifications Off';
+      els.notificationBtn.classList.remove('active');
+    }
+  }
+
+  function toggleNotifications() {
+    if (!('Notification' in window)) {
+      alert('Your browser does not support notifications.');
+      return;
+    }
+
+    if (notificationsEnabled) {
+      // Turn off
+      notificationsEnabled = false;
+      localStorage.setItem(NOTIFICATIONS_KEY_USER, 'false');
+      stopNotificationCheck();
+      updateNotificationButton();
+    } else {
+      // Request permission and turn on
+      if (Notification.permission === 'granted') {
+        notificationsEnabled = true;
+        localStorage.setItem(NOTIFICATIONS_KEY_USER, 'true');
+        startNotificationCheck();
+        updateNotificationButton();
+      } else if (Notification.permission !== 'denied') {
+        Notification.requestPermission().then(permission => {
+          if (permission === 'granted') {
+            notificationsEnabled = true;
+            localStorage.setItem(NOTIFICATIONS_KEY_USER, 'true');
+            startNotificationCheck();
+            updateNotificationButton();
+          }
+        });
+      } else {
+        alert('Please enable notifications in your browser settings.');
+      }
+    }
+  }
+
+  function startNotificationCheck() {
+    if (notificationCheckInterval) return;
+    notificationCheckInterval = setInterval(checkUpcomingRoutines, 60000); // Check every minute
+    checkUpcomingRoutines(); // Check immediately
+  }
+
+  function stopNotificationCheck() {
+    if (notificationCheckInterval) {
+      clearInterval(notificationCheckInterval);
+      notificationCheckInterval = null;
+    }
+  }
+
+  function checkUpcomingRoutines() {
+    if (!notificationsEnabled || !isToday(currentDate)) return;
+
+    const now = new Date();
+    const currentTimeStr = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+    const notifiedKey = 'notified_' + dateToKey(currentDate);
+    const notified = JSON.parse(localStorage.getItem(notifiedKey) || '[]');
+
+    routines.forEach(r => {
+      if (notified.includes(r.id)) return; // Already notified
+
+      const [rH, rM] = r.time.split(':').map(Number);
+      const routineTime = String(rH).padStart(2, '0') + ':' + String(rM).padStart(2, '0');
+
+      // 5 minutes before routine starts
+      const routineDate = new Date();
+      routineDate.setHours(rH, rM, 0);
+      const notifTime = new Date(routineDate.getTime() - 5 * 60000);
+      const notifTimeStr = String(notifTime.getHours()).padStart(2, '0') + ':' + String(notifTime.getMinutes()).padStart(2, '0');
+
+      if (currentTimeStr === notifTimeStr) {
+        new Notification('Routine Reminder 🔔', {
+          body: `"${r.title}" starts in 5 minutes at ${formatTime(r.time)}`,
+          icon: '🗓️',
+          tag: r.id,
+        });
+        notified.push(r.id);
+        localStorage.setItem(notifiedKey, JSON.stringify(notified));
+      }
+    });
+  }
+
+  // ===== Recurring Routines =====
+  function shouldIncludeRecurringRoutine(routine, date) {
+    if (!routine.recurrence || routine.recurrence === 'none') return false;
+
+    if (routine.recurrence === 'daily') return true;
+
+    if (routine.recurrence === 'weekly') {
+      const dayOfWeek = date.getDay();
+      const recurringDays = routine.recurringDays || [0, 1, 2, 3, 4, 5, 6];
+      return recurringDays.includes(dayOfWeek);
+    }
+
+    if (routine.recurrence === 'monthly') {
+      return date.getDate() === routine.monthlyDay;
+    }
+
+    return false;
+  }
+
+  function getRecurringRoutinesForDate(d) {
+    const template = getTemplate();
+    const key = dateToKey(d);
+    const recurringRoutines = [];
+
+    template.forEach(r => {
+      if (shouldIncludeRecurringRoutine(r, d)) {
+        recurringRoutines.push({
+          ...r,
+          id: r.id + '_' + key,
+          completed: false,
+          isRecurring: true,
+        });
+      }
+    });
+
+    return recurringRoutines;
+  }
+
+  // ===== Routine Templates =====
+  function getSavedTemplates() {
+    const raw = localStorage.getItem(SAVED_TEMPLATES_KEY);
+    if (raw) {
+      try { return JSON.parse(raw); } catch { return []; }
+    }
+    return [];
+  }
+
+  function saveSavedTemplates(templates) {
+    localStorage.setItem(SAVED_TEMPLATES_KEY, JSON.stringify(templates));
+  }
+
+  function saveCurrentAsTemplate(name) {
+    if (!name || !name.trim()) {
+      alert('Please enter a template name');
+      return;
+    }
+
+    const templates = getSavedTemplates();
+    const template = routines.map(r => ({
+      id: r.id.split('_')[0],
+      title: r.title,
+      time: r.time,
+      duration: r.duration,
+      category: r.category,
+      notes: r.notes,
+      recurrence: r.recurrence || 'none',
+      recurringDays: r.recurringDays,
+      monthlyDay: r.monthlyDay,
+    }));
+
+    templates.push({
+      id: generateId(),
+      name: name.trim(),
+      routines: template,
+      createdAt: new Date().toISOString(),
+    });
+
+    saveSavedTemplates(templates);
+    alert(`Template "${name}" saved successfully!`);
+  }
+
+  function applyTemplate(templateId) {
+    const templates = getSavedTemplates();
+    const template = templates.find(t => t.id === templateId);
+    if (!template) return;
+
+    routines = template.routines.map(r => ({
+      ...r,
+      id: r.id + '_' + dateToKey(currentDate),
+      completed: false,
+    }));
+
+    saveRoutines();
+    renderRoutines();
+    updateProgress();
+  }
+
+  function deleteTemplate(templateId) {
+    if (!confirm('Delete this template?')) return;
+    let templates = getSavedTemplates();
+    templates = templates.filter(t => t.id !== templateId);
+    saveSavedTemplates(templates);
+    showTemplatesModal();
+  }
+
+  function showTemplatesModal() {
+    const templates = getSavedTemplates();
+    if (templates.length === 0) {
+      els.templatesContainer.innerHTML = '<p style="padding: 20px; text-align: center; color: var(--text-muted);">No saved templates yet</p>';
+    } else {
+      els.templatesContainer.innerHTML = templates.map(t => `
+        <div class="template-item">
+          <div class="template-info">
+            <div class="template-name">${escapeHtml(t.name)}</div>
+            <div class="template-meta">${t.routines.length} routines</div>
+          </div>
+          <div class="template-actions">
+            <button class="template-apply-btn" data-id="${t.id}">Load</button>
+            <button class="template-delete-btn" data-id="${t.id}">Delete</button>
+          </div>
+        </div>
+      `).join('');
+
+      els.templatesContainer.querySelectorAll('.template-apply-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          applyTemplate(btn.dataset.id);
+          closeTemplatesModal();
+        });
+      });
+
+      els.templatesContainer.querySelectorAll('.template-delete-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          deleteTemplate(btn.dataset.id);
+        });
+      });
+    }
+
+    els.templatesOverlay.classList.add('active');
+  }
+
+  function closeTemplatesModal() {
+    els.templatesOverlay.classList.remove('active');
+  }
+
   // ===== Render Routines =====
   function renderRoutines() {
     const filtered = activeFilter === 'all'
@@ -293,6 +570,7 @@
     editingId = null;
     els.routineForm.reset();
     setActiveCategory('work');
+    setActiveRecurrence('none');
 
     if (mode === 'edit' && routine) {
       editingId = routine.id;
@@ -304,6 +582,7 @@
       els.routineNotes.value = routine.notes || '';
       els.routineId.value = routine.id;
       setActiveCategory(routine.category);
+      setActiveRecurrence(routine.recurrence || 'none');
     } else {
       els.modalTitle.textContent = 'Add Routine';
       els.saveBtn.textContent = 'Add Routine';
@@ -341,6 +620,20 @@
     });
   }
 
+  // ===== Recurrence Picker =====
+  function getActiveRecurrence() {
+    if (!els.recurrencePicker) return 'none';
+    const active = els.recurrencePicker.querySelector('.recurrence-btn.active');
+    return active ? active.dataset.recurrence : 'none';
+  }
+
+  function setActiveRecurrence(rec) {
+    if (!els.recurrencePicker) return;
+    els.recurrencePicker.querySelectorAll('.recurrence-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.recurrence === rec);
+    });
+  }
+
   // ===== Event Handlers =====
   function handleFormSubmit(e) {
     e.preventDefault();
@@ -349,6 +642,7 @@
     const time = els.routineTime.value;
     const duration = parseInt(els.routineDuration.value, 10);
     const category = getActiveCategory();
+    const recurrence = getActiveRecurrence();
     const notes = els.routineNotes.value.trim();
 
     if (!title || !time || !duration) return;
@@ -356,7 +650,7 @@
     if (editingId) {
       const idx = routines.findIndex(r => r.id === editingId);
       if (idx !== -1) {
-        routines[idx] = { ...routines[idx], title, time, duration, category, notes };
+        routines[idx] = { ...routines[idx], title, time, duration, category, recurrence, notes };
       }
     } else {
       routines.push({
@@ -365,6 +659,7 @@
         time,
         duration,
         category,
+        recurrence,
         notes,
         completed: false,
       });
@@ -442,7 +737,14 @@
 
   // ===== Initialize =====
   function init() {
+    // Display username in header
+    const usernameEl = document.getElementById('username');
+    if (usernameEl) {
+      usernameEl.textContent = currentUser.username;
+    }
+
     migrateOldData();
+    initNotifications();
     loadRoutinesForDate(currentDate);
     updateDateTime();
     updateDateNav();
@@ -480,14 +782,56 @@
       setActiveCategory(btn.dataset.category);
     });
 
+    // Recurrence picker
+    if (els.recurrencePicker) {
+      els.recurrencePicker.addEventListener('click', (e) => {
+        const btn = e.target.closest('.recurrence-btn');
+        if (!btn) return;
+        setActiveRecurrence(btn.dataset.recurrence);
+      });
+    }
+
+    // Notifications button
+    if (els.notificationBtn) {
+      els.notificationBtn.addEventListener('click', toggleNotifications);
+    }
+
+    // Templates button
+    if (els.templateBtn) {
+      els.templateBtn.addEventListener('click', () => showTemplatesModal());
+    }
+
+    if (els.saveAsTemplateBtn) {
+      els.saveAsTemplateBtn.addEventListener('click', () => {
+        const name = els.templateNameInput ? els.templateNameInput.value : prompt('Template name:');
+        if (name) {
+          saveCurrentAsTemplate(name);
+          if (els.templateNameInput) els.templateNameInput.value = '';
+        }
+      });
+    }
+
+    // Templates modal close
+    if (els.templatesOverlay) {
+      els.templatesOverlay.addEventListener('click', (e) => {
+        if (e.target === els.templatesOverlay) closeTemplatesModal();
+      });
+    }
+
+    if (els.templatesClose) {
+      els.templatesClose.addEventListener('click', closeTemplatesModal);
+    }
+
     $$('.filter-btn').forEach(btn => {
       btn.addEventListener('click', handleFilterClick);
     });
 
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
-        if (els.deleteOverlay.classList.contains('active')) {
+        if (els.deleteOverlay && els.deleteOverlay.classList.contains('active')) {
           closeDeleteConfirm();
+        } else if (els.templatesOverlay && els.templatesOverlay.classList.contains('active')) {
+          closeTemplatesModal();
         } else if (els.modalOverlay.classList.contains('active')) {
           closeModal();
         }
