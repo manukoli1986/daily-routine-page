@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Manage your profile - Daily Routine Planner">
+  <title>Profile - Daily Routine Planner</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    .profile-container {
+      position: relative;
+      z-index: 1;
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 24px 20px 100px;
+    }
+
+    .profile-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 24px 28px;
+      background: var(--bg-card);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      margin-bottom: 24px;
+      box-shadow: var(--shadow-card);
+    }
+
+    .profile-title {
+      font-size: 24px;
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--text-primary), var(--accent-primary));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .back-link {
+      color: var(--accent-primary);
+      text-decoration: none;
+      font-weight: 600;
+      padding: 8px 12px;
+      border-radius: var(--radius-sm);
+      transition: all var(--transition-fast);
+    }
+
+    .back-link:hover {
+      background: rgba(124, 92, 252, 0.1);
+    }
+
+    .profile-section {
+      padding: 28px;
+      background: var(--bg-card);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      margin-bottom: 20px;
+      box-shadow: var(--shadow-card);
+    }
+
+    .section-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 20px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .form-group {
+      margin-bottom: 18px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+
+    .form-group input {
+      width: 100%;
+      padding: 12px 16px;
+      background: var(--bg-input);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      color: var(--text-primary);
+      font-size: 14px;
+      font-family: inherit;
+      outline: none;
+      transition: all var(--transition-fast);
+    }
+
+    .form-group input:focus {
+      border-color: var(--accent-primary);
+      box-shadow: 0 0 0 3px var(--accent-primary-glow);
+    }
+
+    .form-group input::placeholder {
+      color: var(--text-muted);
+    }
+
+    .info-text {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-top: 6px;
+    }
+
+    .button-group {
+      display: flex;
+      gap: 10px;
+      margin-top: 24px;
+    }
+
+    .btn {
+      padding: 11px 24px;
+      border-radius: var(--radius-sm);
+      font-size: 14px;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      border: none;
+      transition: all var(--transition-fast);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent-primary), #a78bfa);
+      color: white;
+      box-shadow: 0 4px 15px var(--accent-primary-glow);
+      flex: 1;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 25px rgba(124, 92, 252, 0.4);
+    }
+
+    .btn-secondary {
+      background: var(--bg-glass);
+      color: var(--text-secondary);
+      border: 1px solid var(--border-color);
+      flex: 1;
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text-primary);
+    }
+
+    .btn-danger {
+      background: rgba(255, 107, 157, 0.15);
+      color: #ff6b9d;
+      border: 1px solid rgba(255, 107, 157, 0.3);
+    }
+
+    .btn-danger:hover {
+      background: rgba(255, 107, 157, 0.25);
+      border-color: #ff6b9d;
+    }
+
+    .user-info {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 16px 0;
+    }
+
+    .user-avatar {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      font-weight: 700;
+    }
+
+    .user-details h3 {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 4px;
+    }
+
+    .user-details p {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .message {
+      padding: 12px 14px;
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      margin-bottom: 16px;
+      display: none;
+    }
+
+    .error-message {
+      background: rgba(255, 107, 157, 0.15);
+      border: 1px solid rgba(255, 107, 157, 0.3);
+      color: #ff6b9d;
+    }
+
+    .success-message {
+      background: rgba(0, 212, 170, 0.15);
+      border: 1px solid rgba(0, 212, 170, 0.3);
+      color: #00d4aa;
+    }
+
+    .message.show {
+      display: block;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="bg-orb bg-orb-1"></div>
+  <div class="bg-orb bg-orb-2"></div>
+  <div class="bg-orb bg-orb-3"></div>
+
+  <div class="profile-container">
+    <!-- Header -->
+    <div class="profile-header">
+      <h1 class="profile-title">👤 Profile</h1>
+      <a href="index.html" class="back-link">← Back to Planner</a>
+    </div>
+
+    <!-- Current User Info -->
+    <div class="profile-section">
+      <div class="section-title">Account Details</div>
+      <div class="user-info">
+        <div class="user-avatar" id="userAvatar">U</div>
+        <div class="user-details">
+          <h3 id="displayUsername">Username</h3>
+          <p id="displayEmail">No email set</p>
+          <p id="displayCreated" style="font-size: 12px; margin-top: 8px;">Created: -</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Update Email -->
+    <div class="profile-section">
+      <div class="section-title">Update Email</div>
+      <div class="error-message message" id="emailErrorMessage"></div>
+      <div class="success-message message" id="emailSuccessMessage"></div>
+      <form id="emailForm">
+        <div class="form-group">
+          <label for="email">Email Address</label>
+          <input type="email" id="email" placeholder="your@email.com">
+        </div>
+        <button type="submit" class="btn btn-primary">Update Email</button>
+      </form>
+    </div>
+
+    <!-- Change Password -->
+    <div class="profile-section">
+      <div class="section-title">Change Password</div>
+      <div class="error-message message" id="passwordErrorMessage"></div>
+      <div class="success-message message" id="passwordSuccessMessage"></div>
+      <form id="passwordForm">
+        <div class="form-group">
+          <label for="currentPassword">Current Password</label>
+          <input type="password" id="currentPassword" placeholder="Enter current password" required>
+        </div>
+        <div class="form-group">
+          <label for="newPassword">New Password</label>
+          <input type="password" id="newPassword" placeholder="Create new password" required>
+          <p class="info-text">At least 6 characters</p>
+        </div>
+        <div class="form-group">
+          <label for="confirmPassword">Confirm New Password</label>
+          <input type="password" id="confirmPassword" placeholder="Confirm new password" required>
+        </div>
+        <button type="submit" class="btn btn-primary">Change Password</button>
+      </form>
+    </div>
+
+    <!-- Danger Zone -->
+    <div class="profile-section" style="border-color: rgba(255, 107, 157, 0.2);">
+      <div class="section-title" style="border-bottom-color: rgba(255, 107, 157, 0.2); color: #ff6b9d;">⚠️ Danger Zone</div>
+      <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">
+        Permanently delete your account and all associated data.
+      </p>
+      <button class="btn btn-danger" id="deleteAccountBtn">Delete Account</button>
+    </div>
+
+    <!-- Logout -->
+    <button class="btn btn-secondary" id="logoutBtn" style="width: 100%; margin-top: 20px;">
+      🚪 Logout
+    </button>
+  </div>
+
+  <script src="auth.js"></script>
+  <script>
+    const currentUser = AuthAPI.getCurrentUser();
+
+    // Redirect if not logged in
+    if (!currentUser) {
+      window.location.href = 'login.html';
+    }
+
+    // Display user info
+    const firstLetter = currentUser.username.charAt(0).toUpperCase();
+    document.getElementById('userAvatar').textContent = firstLetter;
+    document.getElementById('displayUsername').textContent = currentUser.username;
+    document.getElementById('displayEmail').textContent = currentUser.email || 'No email set';
+    document.getElementById('displayCreated').textContent = 'Joined: ' + new Date(currentUser.createdAt).toLocaleDateString();
+
+    // Set email input
+    if (currentUser.email) {
+      document.getElementById('email').value = currentUser.email;
+    }
+
+    // Update Email Form
+    document.getElementById('emailForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const email = document.getElementById('email').value.trim();
+      const emailErrorMsg = document.getElementById('emailErrorMessage');
+      const emailSuccessMsg = document.getElementById('emailSuccessMessage');
+
+      emailErrorMsg.classList.remove('show');
+      emailSuccessMsg.classList.remove('show');
+
+      const result = AuthAPI.updateUserProfile(currentUser.username, { email });
+
+      if (result.success) {
+        emailSuccessMsg.textContent = result.message;
+        emailSuccessMsg.classList.add('show');
+        // Update display
+        currentUser.email = email;
+        document.getElementById('displayEmail').textContent = email || 'No email set';
+      } else {
+        emailErrorMsg.textContent = result.message;
+        emailErrorMsg.classList.add('show');
+      }
+    });
+
+    // Change Password Form
+    document.getElementById('passwordForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const currentPassword = document.getElementById('currentPassword').value;
+      const newPassword = document.getElementById('newPassword').value;
+      const confirmPassword = document.getElementById('confirmPassword').value;
+      const passwordErrorMsg = document.getElementById('passwordErrorMessage');
+      const passwordSuccessMsg = document.getElementById('passwordSuccessMessage');
+
+      passwordErrorMsg.classList.remove('show');
+      passwordSuccessMsg.classList.remove('show');
+
+      if (newPassword !== confirmPassword) {
+        passwordErrorMsg.textContent = 'New passwords do not match';
+        passwordErrorMsg.classList.add('show');
+        return;
+      }
+
+      const result = AuthAPI.updateUserProfile(currentUser.username, {
+        currentPassword,
+        newPassword,
+      });
+
+      if (result.success) {
+        passwordSuccessMsg.textContent = 'Password changed successfully!';
+        passwordSuccessMsg.classList.add('show');
+        document.getElementById('passwordForm').reset();
+      } else {
+        passwordErrorMsg.textContent = result.message;
+        passwordErrorMsg.classList.add('show');
+      }
+    });
+
+    // Delete Account
+    document.getElementById('deleteAccountBtn').addEventListener('click', () => {
+      if (!confirm('Are you sure? This will permanently delete your account and all data. This cannot be undone.')) {
+        return;
+      }
+
+      const password = prompt('Enter your password to confirm deletion:');
+      if (!password) return;
+
+      const result = AuthAPI.deleteUserAccount(currentUser.username, password);
+
+      if (result.success) {
+        alert('Account deleted successfully');
+        window.location.href = 'login.html';
+      } else {
+        alert('Error: ' + result.message);
+      }
+    });
+
+    // Logout
+    document.getElementById('logoutBtn').addEventListener('click', () => {
+      AuthAPI.logoutUser();
+      window.location.href = 'login.html';
+    });
+  </script>
+</body>
+
+</html>

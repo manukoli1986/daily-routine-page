@@ -3,7 +3,14 @@
 (() => {
   'use strict';
 
-  const STORAGE_KEY = 'dailyRoutineData';
+  // ===== Authentication Check =====
+  const currentUser = window.AuthAPI?.getCurrentUser();
+  if (!currentUser) {
+    window.location.href = 'login.html';
+    return;
+  }
+
+  const STORAGE_KEY = window.AuthAPI.getUserRoutinesKey(currentUser.username);
 
   const CATEGORIES = ['work', 'health', 'personal', 'meals', 'leisure'];
   const CAT_COLORS = {

@@ -1,14 +1,21 @@
 // ===== Daily Routine Planner - Client-Side Logic =====
-// Multi-day storage with date navigation
+// Multi-user, multi-day storage with date navigation
 
 (() => {
   'use strict';
 
-  // ===== Storage Keys =====
-  const STORAGE_KEY = 'dailyRoutineData';       // per-date routine data
-  const TEMPLATE_KEY = 'dailyRoutineTemplate';  // default routine template
-  const SAVED_TEMPLATES_KEY = 'dailyRoutineTemplates'; // user-saved templates
-  const NOTIFICATIONS_KEY = 'notificationsEnabled';
+  // ===== Authentication Check =====
+  const currentUser = window.AuthAPI?.getCurrentUser();
+  if (!currentUser) {
+    window.location.href = 'login.html';
+    return;
+  }
+
+  // ===== Storage Keys (User-Specific) =====
+  const STORAGE_KEY = window.AuthAPI.getUserRoutinesKey(currentUser.username);
+  const SAVED_TEMPLATES_KEY = window.AuthAPI.getUserTemplatesKey(currentUser.username);
+  const TEMPLATE_KEY = 'dailyRoutineTemplate';  // default routine template (shared)
+  const NOTIFICATIONS_KEY_USER = 'notificationsEnabled_' + currentUser.username;
 
   // ===== Default Routines Template =====
   const DEFAULT_TEMPLATE = [
@@ -261,7 +268,7 @@
 
   // ===== Notifications =====
   function initNotifications() {
-    notificationsEnabled = localStorage.getItem(NOTIFICATIONS_KEY) === 'true';
+    notificationsEnabled = localStorage.getItem(NOTIFICATIONS_KEY_USER) === 'true';
     updateNotificationButton();
     if (notificationsEnabled && Notification.permission === 'granted') {
       startNotificationCheck();
@@ -288,21 +295,21 @@
     if (notificationsEnabled) {
       // Turn off
       notificationsEnabled = false;
-      localStorage.setItem(NOTIFICATIONS_KEY, 'false');
+      localStorage.setItem(NOTIFICATIONS_KEY_USER, 'false');
       stopNotificationCheck();
       updateNotificationButton();
     } else {
       // Request permission and turn on
       if (Notification.permission === 'granted') {
         notificationsEnabled = true;
-        localStorage.setItem(NOTIFICATIONS_KEY, 'true');
+        localStorage.setItem(NOTIFICATIONS_KEY_USER, 'true');
         startNotificationCheck();
         updateNotificationButton();
       } else if (Notification.permission !== 'denied') {
         Notification.requestPermission().then(permission => {
           if (permission === 'granted') {
             notificationsEnabled = true;
-            localStorage.setItem(NOTIFICATIONS_KEY, 'true');
+            localStorage.setItem(NOTIFICATIONS_KEY_USER, 'true');
             startNotificationCheck();
             updateNotificationButton();
           }
@@ -730,6 +737,12 @@
 
   // ===== Initialize =====
   function init() {
+    // Display username in header
+    const usernameEl = document.getElementById('username');
+    if (usernameEl) {
+      usernameEl.textContent = currentUser.username;
+    }
+
     migrateOldData();
     initNotifications();
     loadRoutinesForDate(currentDate);
